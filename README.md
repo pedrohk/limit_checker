@@ -66,7 +66,7 @@ This project addresses these challenges by maintaining an optimized **in-memory 
 ### Installation
 
 ```bash
-git clone https://github.com/your-username/limit_checker.git
+git clone https://github.com/pedrohk/limit_checker.git
 cd limit_checker
 ```
 
