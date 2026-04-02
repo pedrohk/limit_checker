@@ -7,25 +7,28 @@ This system leverages a **Segment Tree with Lazy Propagation** to achieve logari
 
 ---
 
-## 🚀 The Technical Challenge
+## 🎯 Use Case: Real-Time Exposure Management
+In High-Frequency Trading (HFT) and Banking, systems must validate thousands of transactions per second against pre-defined credit or risk limits. 
 
-In financial institutions, **credit limit and exposure monitoring must be near-instantaneous**.
-Traditional relational database approaches often suffer from:
+**Scenario:** A bank defines exposure limits for different sectors or groups of assets. When a large trade or a batch of trades happens, the system must:
+1.  Verify if the new exposure exceeds the limit of *any* asset in the affected range.
+2.  Atomically update the exposure if, and only if, all assets remain within their safety bounds.
+3.  Trigger immediate alerts (e.g., Slack) for any blocked transaction to notify risk officers.
 
-* I/O latency
-* Lock contention
-* Poor scalability under high-frequency trading (HFT) workloads
+---
 
-This project addresses these challenges by maintaining an optimized **in-memory risk structure**:
+## ⚖️ Pros and Cons
 
-* **Segment Tree**
-  Enables efficient range queries and updates (e.g., assets within a sector)
+### Pros
+*   **Performance:** $O(\log N)$ complexity for both updates and queries, compared to $O(N)$ for naive array scans.
+*   **Atomic Range Validation:** Validates a whole range of accounts/assets in a single pass.
+*   **Memory Efficiency:** Flat `Vec`-based tree structure ensures high CPU cache locality and zero-cost abstractions.
+*   **Safety:** Rust's ownership model and `Result` types prevent memory corruption and unhandled risk violations.
 
-* **Lazy Propagation**
-  Defers updates to child nodes until necessary, reducing CPU overhead
-
-* **Transactional Integrity**
-  Uses Rust’s `Result` type to guarantee that invalid transactions are rejected *before* state mutation
+### Cons
+*   **Memory Overhead:** A Segment Tree requires approximately $4N$ space to store the nodes.
+*   **Static Bounds:** Standard implementation works best with a fixed number of assets (though Dynamic Segment Trees can mitigate this).
+*   **Complexity:** Harder to implement and maintain than simple hash maps or arrays.
 
 ---
 
@@ -51,6 +54,37 @@ This project addresses these challenges by maintaining an optimized **in-memory 
 
 * ✅ **Cache-Friendly Design**
   Flat `Vec`-based tree structure optimized for CPU cache locality
+
+---
+
+## 💻 Implementation (Core Engine)
+
+```rust
+// Core structure using a flat vector for the Segment Tree
+pub struct LimitSegmentTree {
+    tree: Vec<Node>,
+    n: usize,
+}
+
+impl LimitSegmentTree {
+    // Updates exposure in range [l, r] with O(log N)
+    pub fn update_exposure(&mut self, l: usize, r: usize, val: i64) -> Result<(), String> {
+        self.update(1, 0, self.n - 1, l, r, val)
+    }
+
+    fn update(&mut self, node: usize, start: usize, end: usize, l: usize, r: usize, val: i64) -> Result<(), String> {
+        // ... Segment Tree Logic with Lazy Propagation ...
+        if start >= l && end <= r {
+            if self.tree[node].current_exposure + val > self.tree[node].max_limit {
+                return Err(format!("Limit violation at range {}-{}", start, end));
+            }
+            self.apply(node, val);
+            return Ok(());
+        }
+        // ... push_down and recursive update ...
+    }
+}
+```
 
 ---
 
